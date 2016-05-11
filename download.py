@@ -39,7 +39,7 @@ def load_cookie(driver, cookie_file):
         pickle.dump(driver.get_cookies(), open(cookie_file, "wb"))
     driver.refresh()
 
-    if False:
+    if not down_config['auto_select_entrance']:
         input("<-请选择通道后, 输入 enter")
     else:
         driver.find_element_by_partial_link_text('知网数据库').click()
@@ -50,8 +50,13 @@ def load_cookie(driver, cookie_file):
             '//a[@href="http://www.5730.net/showinfo-10-145-0.html"]').click()
         # input('gg')
 
-        # for handle in driver.window_handles:
-        #     driver.switch_to_window(handle)
+        for handle in driver.window_handles:
+            driver.switch_to_window(handle)
+            try:
+                alert = driver.switch_to_alert()
+                alert.accept()
+            except Exception as e:
+                pass
         #     try:
         #         WebDriverWait(driver, 10).until(EC.alert_is_present(),
         #                                         'Timed out waiting for PA creation ' +
@@ -63,7 +68,7 @@ def load_cookie(driver, cookie_file):
         #     except TimeoutException:
         #         print("no alert")
         #     print(driver.title)
-        input("点击确认")
+        #input("点击确认")
         goto_window_contains_text(driver, "选择平台入口")
         # driver.find_element_by_class_name('body').send_keys(Keys.ENTER)
         driver.find_element_by_partial_link_text("知识发现网络平台").click()
@@ -81,7 +86,8 @@ def load_download_config(config):
             'version': 1,
             'down_time_sep': 10,
             'load_time_out': 20,
-            'auto_mode': True}
+            'auto_mode': True,
+            'auto_select_entrance': True}
 
 doc_dict = load_doc_dict(DICT_FILE)
 down_config = load_download_config(DOWN_CONFIG)
@@ -235,6 +241,7 @@ def download(driver, url):
 
 def run():
     load_cookie(driver, COOKIE_FILE)
+    #input("gogo")
     init_retrieve_page(driver)
     iterate_page(driver)
 

@@ -1,9 +1,10 @@
 {
-    "date_from": "2009-01-01",
-    "load_time_out": 20,
-    "date_to": "2009-01-31",
+    "date_to": "2015-5-31",
+    "version": 597,
+    "date_from": "2015-05-20",
     "down_time_sep": 10,
-    "source": "中国证券报",
-    "version": 1,
-    "auto_mode": true
+    "source": "上海证券报",
+    "auto_select_entrance": true,
+    "auto_mode": true,
+    "load_time_out": 20
 }
