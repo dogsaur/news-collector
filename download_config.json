@@ -1,0 +1,9 @@
+{
+    "date_from": "2009-01-01",
+    "load_time_out": 20,
+    "date_to": "2009-01-31",
+    "down_time_sep": 10,
+    "source": "中国证券报",
+    "version": 1,
+    "auto_mode": true
+}
