@@ -1,6 +1,7 @@
 import os
 import json
 import pickle
+import datetime
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.support.ui import Select
@@ -91,7 +92,7 @@ def init_retrieve_page(driver):
     date_from.send_keys(down_config['date_from'])
 
     date_to = driver.find_element_by_id("publishdate_to")
-    date_to.send_keys(down_config['date_to'])
+    date_to.send_keys(down_config['date_from'])
 
     print("->开始检索...")
     search_bt = driver.find_element_by_id("btnSearch")
@@ -125,6 +126,7 @@ def init_retrieve_page(driver):
 def iterate_page(driver):
     while True:
         links = driver.find_elements_by_class_name('fz14')
+        finished_flag = True
         for i in range(len(links)):
             goto_window_contains_text(driver, "中国重要报纸")
             goto_frame(driver, 'iframeResult')
@@ -132,6 +134,7 @@ def iterate_page(driver):
             link = links[i]
             doc_name = link.get_attribute("text")
             if doc_name not in doc_dict:
+                finished_flag = False
                 print('->抓取第', len(doc_dict), '项...', doc_name)
                 #url = link.get_attribute("href")
                 tr = link.find_element_by_xpath('../..')
@@ -183,6 +186,14 @@ def iterate_page(driver):
         goto_window_contains_text(driver, "中国重要报纸")
         goto_frame(driver, 'iframeResult')
 
+        if finished_flag:
+            print('-> ', down_config['date_from'], 'finished, next day...')
+            d = datetime.datetime.strptime(
+                down_config['date_from'], "%Y-%m-%d")
+            d += datetime.timedelta(days=1)
+            down_config['date_from'] = d.strftime("%Y-%m-%d")
+            return
+
         print("->跳转下一页...")
         WebDriverWait(driver, 50).until(
             EC.element_to_be_clickable(
@@ -210,8 +221,8 @@ def check_download_result(path):
 
 driver = webdriver.Chrome()
 if __name__ == '__main__':
-    load_cookie(driver, COOKIE_FILE)
     try_cnt = 1
+    load_cookie(driver, COOKIE_FILE)
     while down_config['date_from'] != down_config['date_to']:
         print('开始进行第', try_cnt, '次尝试...')
         try_cnt += 1
