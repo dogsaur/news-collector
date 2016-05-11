@@ -19,7 +19,7 @@ DOWN_CONFIG = 'download_config.json'
 
 def load_doc_dict(doc_dict_file):
     if os.path.isfile(doc_dict_file):
-        return json.load(open(doc_dict_file, 'r'))
+        return json.load(open(doc_dict_file, 'r', encoding='utf-8'))
     else:
         return dict()
 
@@ -68,7 +68,7 @@ def load_cookie(driver, cookie_file):
         #     except TimeoutException:
         #         print("no alert")
         #     print(driver.title)
-        #input("点击确认")
+        # input("点击确认")
         goto_window_contains_text(driver, "选择平台入口")
         # driver.find_element_by_class_name('body').send_keys(Keys.ENTER)
         driver.find_element_by_partial_link_text("知识发现网络平台").click()
@@ -77,7 +77,7 @@ def load_cookie(driver, cookie_file):
 
 def load_download_config(config):
     if os.path.isfile(config):
-        return json.load(open(config, 'r'))
+        return json.load(open(config, 'r', encoding='utf-8'))
     else:
         return {
             'source': '上海证券报',
@@ -186,7 +186,7 @@ def iterate_page(driver):
                 # print('->open success...')
                 #driver.manage().timeouts().pageLoadTimeout(5, TimeUnit.SECONDS);
                 goto_window_contains_text(driver, doc_name)
-                #print(driver.title)
+                # print(driver.title)
                 download_link = WebDriverWait(driver, 20).until(
                     EC.element_to_be_clickable(
                         (By.PARTIAL_LINK_TEXT, 'PDF下载')))
@@ -241,7 +241,7 @@ def download(driver, url):
 
 def run():
     load_cookie(driver, COOKIE_FILE)
-    #input("gogo")
+    # input("gogo")
     init_retrieve_page(driver)
     iterate_page(driver)
 
@@ -271,13 +271,15 @@ if __name__ == '__main__':
         finally:
             down_config['version'] += 1
             print('->保存下载状态...')
-            json.dump(doc_dict, open(DICT_FILE +
-                                     '.' + str(down_config['version']), 'w'),
-                      ensure_ascii=False, indent=4)
-            json.dump(doc_dict, open(DICT_FILE, "w"),
+            json.dump(doc_dict, open(
+                DICT_FILE + '.' + str(down_config['version']),
+                'w',
+                encoding='utf-8'),
+                ensure_ascii=False, indent=4)
+            json.dump(doc_dict, open(DICT_FILE, "w", encoding='utf-8'),
                       ensure_ascii=False, indent=4)
             print('->保存配置文件...')
-            json.dump(down_config, open(DOWN_CONFIG, 'w'),
+            json.dump(down_config, open(DOWN_CONFIG, 'w', encoding='utf-8'),
                       ensure_ascii=False, indent=4)
             try:
                 driver.quit()
