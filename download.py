@@ -38,7 +38,36 @@ def load_cookie(driver, cookie_file):
         input('<-cookie不存在请手动登陆后, 输入 enter')
         pickle.dump(driver.get_cookies(), open(cookie_file, "wb"))
     driver.refresh()
-    input("<-请选择通道后, 输入 enter")
+
+    if False:
+        input("<-请选择通道后, 输入 enter")
+    else:
+        driver.find_element_by_partial_link_text('知网数据库').click()
+        goto_window_contains_text(driver, "知网数据库_5730")
+        driver.execute_script(
+            "window.scrollTo(0, document.body.scrollHeight);")
+        driver.find_element_by_xpath(
+            '//a[@href="http://www.5730.net/showinfo-10-145-0.html"]').click()
+        # input('gg')
+
+        # for handle in driver.window_handles:
+        #     driver.switch_to_window(handle)
+        #     try:
+        #         WebDriverWait(driver, 10).until(EC.alert_is_present(),
+        #                                         'Timed out waiting for PA creation ' +
+        #                                         'confirmation popup to appear.')
+
+        #         alert = driver.switch_to_alert()
+        #         alert.accept()
+        #         print("alert accepted")
+        #     except TimeoutException:
+        #         print("no alert")
+        #     print(driver.title)
+        input("点击确认")
+        goto_window_contains_text(driver, "选择平台入口")
+        # driver.find_element_by_class_name('body').send_keys(Keys.ENTER)
+        driver.find_element_by_partial_link_text("知识发现网络平台").click()
+        # input("go")
 
 
 def load_download_config(config):
@@ -107,18 +136,18 @@ def init_retrieve_page(driver):
         EC.element_to_be_clickable(
             (By.LINK_TEXT, '50'))).click()
 
-    print("->按照日期排序...")
-    img_src = ''
-    while 'icon-u' not in img_src:
-        order_by = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable(
-                (By.LINK_TEXT, '报纸日期')))
-        order_by.click()
-        order_by = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable(
-                (By.LINK_TEXT, '报纸日期')))
-        img = order_by.find_element_by_tag_name('img')
-        img_src = img.get_attribute('src')
+    # print("->按照日期排序...")
+    # img_src = ''
+    # while 'icon-u' not in img_src:
+    #     order_by = WebDriverWait(driver, 20).until(
+    #         EC.element_to_be_clickable(
+    #             (By.LINK_TEXT, '报纸日期')))
+    #     order_by.click()
+    #     order_by = WebDriverWait(driver, 20).until(
+    #         EC.element_to_be_clickable(
+    #             (By.LINK_TEXT, '报纸日期')))
+    #     img = order_by.find_element_by_tag_name('img')
+    #     img_src = img.get_attribute('src')
 
     print("->初始化成功...")
 
@@ -151,13 +180,12 @@ def iterate_page(driver):
                 # print('->open success...')
                 #driver.manage().timeouts().pageLoadTimeout(5, TimeUnit.SECONDS);
                 goto_window_contains_text(driver, doc_name)
-                print(driver.title)
+                #print(driver.title)
                 download_link = WebDriverWait(driver, 20).until(
                     EC.element_to_be_clickable(
                         (By.PARTIAL_LINK_TEXT, 'PDF下载')))
                 #download = driver.find_element_by_partial_link_text("PDF下载")
                 # download.click()
-
 
                 print('->downloading... [', doc_name, ']')
                 #download(driver, pdf_url)
@@ -206,6 +234,7 @@ def download(driver, url):
 
 
 def run():
+    load_cookie(driver, COOKIE_FILE)
     init_retrieve_page(driver)
     iterate_page(driver)
 
@@ -215,14 +244,12 @@ def check_download_result(path):
     for file in os.listdir(path):
         if os.path.isfile(os.path.join(path, file)):
             print(file)
-        #TODO: check download result
-
+        # TODO: check download result
 
 
 driver = webdriver.Chrome()
 if __name__ == '__main__':
     try_cnt = 1
-    load_cookie(driver, COOKIE_FILE)
     while down_config['date_from'] != down_config['date_to']:
         print('开始进行第', try_cnt, '次尝试...')
         try_cnt += 1
@@ -245,3 +272,8 @@ if __name__ == '__main__':
             print('->保存配置文件...')
             json.dump(down_config, open(DOWN_CONFIG, 'w'),
                       ensure_ascii=False, indent=4)
+            try:
+                driver.quit()
+            except Exception as e:
+                print(e)
+            driver = webdriver.Chrome()
