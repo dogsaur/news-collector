@@ -1,3 +1,4 @@
+#encoding: utf-8
 import os
 import json
 import pickle
@@ -38,7 +39,7 @@ def load_cookie(driver, cookie_file):
         input('<-cookie不存在请手动登陆后, 输入 enter')
         pickle.dump(driver.get_cookies(), open(cookie_file, "wb"))
     driver.refresh()
-
+    driver.set_page_load_timeout(5)
     if not down_config['auto_select_entrance']:
         input("<-请选择通道后, 输入 enter")
     else:
@@ -52,11 +53,12 @@ def load_cookie(driver, cookie_file):
 
         for handle in driver.window_handles:
             driver.switch_to_window(handle)
+            #sleep(1)
             try:
                 alert = driver.switch_to_alert()
                 alert.accept()
             except Exception as e:
-                pass
+                print('no alert')
         #     try:
         #         WebDriverWait(driver, 10).until(EC.alert_is_present(),
         #                                         'Timed out waiting for PA creation ' +
@@ -69,7 +71,9 @@ def load_cookie(driver, cookie_file):
         #         print("no alert")
         #     print(driver.title)
         # input("点击确认")
+        driver.set_page_load_timeout(5)
         goto_window_contains_text(driver, "选择平台入口")
+        driver.set_page_load_timeout(5)
         # driver.find_element_by_class_name('body').send_keys(Keys.ENTER)
         driver.find_element_by_partial_link_text("知识发现网络平台").click()
         # input("go")
@@ -174,7 +178,7 @@ def iterate_page(driver):
                 #url = link.get_attribute("href")
                 tr = link.find_element_by_xpath('../..')
                 date = tr.find_element_by_xpath(
-                    "//td[contains(text(), '2015')]").text
+                    "//td[contains(text(), '2009')]").text
                 pdf_url = link.get_attribute('href')
                 # print('->open in new tab...')
                 try:
@@ -220,18 +224,19 @@ def iterate_page(driver):
         goto_window_contains_text(driver, "中国重要报纸")
         goto_frame(driver, 'iframeResult')
 
-        if finished_flag:
+        print("->跳转下一页...")
+        try:
+            WebDriverWait(driver, 20).until(
+                EC.element_to_be_clickable(
+                    (By.ID, 'Page_next'))).click()
+        except Exception as e:
+            print('-> can not got next page')
             print('-> ', down_config['date_from'], 'finished, next day...')
             d = datetime.datetime.strptime(
                 down_config['date_from'], "%Y-%m-%d")
             d += datetime.timedelta(days=1)
             down_config['date_from'] = d.strftime("%Y-%m-%d")
             return
-
-        print("->跳转下一页...")
-        WebDriverWait(driver, 50).until(
-            EC.element_to_be_clickable(
-                (By.ID, 'Page_next'))).click()
 
 
 def download(driver, url):
@@ -255,6 +260,8 @@ def check_download_result(path):
 
 
 driver = webdriver.Chrome()
+driver.set_page_load_timeout(5)
+
 if __name__ == '__main__':
     try_cnt = 1
     while down_config['date_from'] != down_config['date_to']:
@@ -286,3 +293,4 @@ if __name__ == '__main__':
             except Exception as e:
                 print(e)
             driver = webdriver.Chrome()
+            driver.set_page_load_timeout(5)
