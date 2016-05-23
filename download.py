@@ -12,6 +12,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 
+import check_result
+import utils
+import db
 
 DICT_FILE = 'doc_info_dict.json'
 COOKIE_FILE = 'cookies.pkl'
@@ -39,7 +42,7 @@ def load_cookie(driver, cookie_file):
         input('<-cookie不存在请手动登陆后, 输入 enter')
         pickle.dump(driver.get_cookies(), open(cookie_file, "wb"))
     driver.refresh()
-    driver.set_page_load_timeout(5)
+    driver.set_page_load_timeout(20)
     if not down_config['auto_select_entrance']:
         input("<-请选择通道后, 输入 enter")
     else:
@@ -71,9 +74,9 @@ def load_cookie(driver, cookie_file):
         #         print("no alert")
         #     print(driver.title)
         # input("点击确认")
-        driver.set_page_load_timeout(5)
+        driver.set_page_load_timeout(20)
         goto_window_contains_text(driver, "选择平台入口")
-        driver.set_page_load_timeout(5)
+        driver.set_page_load_timeout(20)
         # driver.find_element_by_class_name('body').send_keys(Keys.ENTER)
         driver.find_element_by_partial_link_text("知识发现网络平台").click()
         # input("go")
@@ -162,7 +165,7 @@ def init_retrieve_page(driver):
     print("->初始化成功...")
 
 
-def iterate_page(driver):
+def iterate_page(driver, is_get_token=False):
     while True:
         links = driver.find_elements_by_class_name('fz14')
         finished_flag = True
@@ -172,7 +175,7 @@ def iterate_page(driver):
             links = driver.find_elements_by_class_name('fz14')
             link = links[i]
             doc_name = link.get_attribute("text")
-            if doc_name not in doc_dict:
+            if doc_name not in doc_dict or is_get_token:
                 finished_flag = False
                 print('->抓取第', len(doc_dict), '项...', doc_name)
                 #url = link.get_attribute("href")
@@ -191,6 +194,16 @@ def iterate_page(driver):
                 #driver.manage().timeouts().pageLoadTimeout(5, TimeUnit.SECONDS);
                 goto_window_contains_text(driver, doc_name)
                 # print(driver.title)
+                if is_get_token:
+                    print(driver.current_url)
+                    c_url = str(driver.current_url)
+                    index = c_url.find('&urlid')
+                    print(index)
+                    token = c_url[index:]
+                    print(token)
+                    # input('gg')
+                    return token
+
                 download_link = WebDriverWait(driver, 20).until(
                     EC.element_to_be_clickable(
                         (By.PARTIAL_LINK_TEXT, 'PDF下载')))
@@ -200,22 +213,19 @@ def iterate_page(driver):
                 print('->downloading... [', doc_name, ']')
                 #download(driver, pdf_url)
                 download_link.click()
+
                 print('->success!')
                 if down_config['auto_mode']:
                     sleep(down_config['down_time_sep'])
                 else:
                     input("->press enter to continue")
                 # input("continue")
-                try:
-                    driver.close()
-                except Exception as e:
-                    print(e)
 
                 down_config['date_from'] = date
                 doc_dict[doc_name] = {"name": str(doc_name),
                                       "date": date,
                                       "pdf_url": pdf_url,
-                                      "source": '上海证券报',
+                                      "source": '中国证券报',
                                       "status": 'downloading'}
 
             else:
@@ -226,7 +236,7 @@ def iterate_page(driver):
 
         print("->跳转下一页...")
         try:
-            WebDriverWait(driver, 20).until(
+            WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable(
                     (By.ID, 'Page_next'))).click()
         except Exception as e:
@@ -238,7 +248,6 @@ def iterate_page(driver):
             down_config['date_from'] = d.strftime("%Y-%m-%d")
             return
 
-
 def download(driver, url):
     print(url)
     driver.get(url)
@@ -247,20 +256,45 @@ def download(driver, url):
 def run():
     load_cookie(driver, COOKIE_FILE)
     # input("gogo")
+    while  True:
+        init_retrieve_page(driver)
+        iterate_page(driver)
+
+FINISHED = 1
+DOWNLOADING = 0
+def fix_missed_files(driver):
+
+    load_cookie(driver, COOKIE_FILE)
+    # input('gg')
+    # records = utils.load_doc_dict()
+    records = db.session.query(db.Record).all()
     init_retrieve_page(driver)
-    iterate_page(driver)
+    token = iterate_page(driver, is_get_token=True)
 
-
-def check_download_result(path):
-    local_files = set()
-    for file in os.listdir(path):
-        if os.path.isfile(os.path.join(path, file)):
-            print(file)
-        # TODO: check download result
+    for record in records:
+        if record.status != FINISHED:
+            url = record.page_url
+            url = url.replace('epub', 'www')
+            url = url.replace('kns', 'KCMS')
+            url = url + token
+            driver.get(url)
+            download_link = WebDriverWait(driver, 20).until(
+                EC.element_to_be_clickable(
+                    (By.PARTIAL_LINK_TEXT, 'PDF下载')))
+            print('->downloading... [', record, ']')
+            download_link.click()
+            print('->success!')
+            print("wait...", end='')
+            for i in range(3):
+                sleep(1)
+                print(3-i, end='..')
+            print()
+            if len(driver.window_handles) > 6:
+                return
 
 
 driver = webdriver.Chrome()
-driver.set_page_load_timeout(5)
+driver.set_page_load_timeout(20)
 
 if __name__ == '__main__':
     try_cnt = 1
@@ -268,7 +302,9 @@ if __name__ == '__main__':
         print('开始进行第', try_cnt, '次尝试...')
         try_cnt += 1
         try:
-            run()
+            # run()
+            check_result.check()
+            fix_missed_files(driver)
         except NoSuchElementException as e:
             print(e)
         except TimeoutException as e:
@@ -283,14 +319,14 @@ if __name__ == '__main__':
                 'w',
                 encoding='utf-8'),
                 ensure_ascii=False, indent=4)
-            json.dump(doc_dict, open(DICT_FILE, "w", encoding='utf-8'),
-                      ensure_ascii=False, indent=4)
+            # json.dump(doc_dict, open(DICT_FILE, "w", encoding='utf-8'),
+            #           ensure_ascii=False, indent=4)
             print('->保存配置文件...')
             json.dump(down_config, open(DOWN_CONFIG, 'w', encoding='utf-8'),
-                      ensure_ascii=False, indent=4)
+                     ensure_ascii=False, indent=4)
             try:
                 driver.quit()
             except Exception as e:
                 print(e)
             driver = webdriver.Chrome()
-            driver.set_page_load_timeout(5)
+            driver.set_page_load_timeout(20)
