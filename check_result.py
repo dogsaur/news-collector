@@ -1,4 +1,7 @@
-import os, re
+import os
+import re
+import shutil
+
 import utils
 import db
 from sqlalchemy.sql import func
@@ -6,7 +9,7 @@ from sqlalchemy.sql import func
 
 def mapping(record):
     translation_table = dict.fromkeys(
-        map(ord, 'β！：∶\n‰\'\":”“()（）＋+/.%、~—·≠《!=…,》-？*'), '_')
+        map(ord, 'β！：∶\n‰\'\":”“()（）＋+/.%、，~—·≠&《!=＝…,》-？?*'), '_')
     tag = record.replace(' ', '').translate(translation_table)
     tag = tag.replace('_', '')
     tag = tag[:15]
@@ -22,6 +25,8 @@ def r_mapping(filename):
 
 config = utils.load_download_config()
 DOWNLOAD_PATH = config['download_path']
+
+
 def check():
     records = db.session.query(db.Record).all()
 
@@ -47,7 +52,7 @@ def check():
             tag = mapping(record.title)
             if tag in result_files:
                 # print('find')
-                # print('find %s', tag)
+                print('find %s', tag)
                 record.filename = result_files[tag]['filename']
                 record.status = 1
                 result_files.pop(tag)
@@ -77,7 +82,7 @@ def remove_dumplicate_files():
     files_to_rm = []
     for file in os.listdir(DOWNLOAD_PATH):
         if os.path.splitext(file)[-1] == '.pdf' and re.search(r'\(\d+\)', file) is not None:
-            # print(file)
+            print(file)
             # print('[%s]' % os.path.splitext(file)[-1])
             files_to_rm.append(file)
     if input('assure to rm? y/n') == 'y':
@@ -88,11 +93,17 @@ def remove_dumplicate_files():
 
 def count_by_month():
     month_count = [0] * 12
+    month_actual_count = [0] * 12
     records = db.session.query(db.Record).all()
+    print('共计 %d 条记录' % len(records))
     for record in records:
         month_count[record.publish_date.month - 1] += 1
+        if record.status == 1:
+            month_actual_count[record.publish_date.month - 1] += 1
     for i in range(12):
-        print('%d 月共有 %d 条记录' % (i + 1, month_count[i]))
+        print('%d 月: %d/%d 条记录' % (i + 1,
+                                   month_actual_count[i],
+                                   month_count[i]))
 
 
 def count_by_day():
@@ -119,12 +130,36 @@ def count_by_day():
     db.session.commit()
 
 
+def classify_by_month():
+    for i in range(1, 13):
+        try:
+            os.mkdir(os.path.join('/Volumes/Bygita/zgzqb', str(i) + '月'))
+        except Exception as e:
+            print(e)
+    input('g')
+    records = db.session.query(db.Record).all()
+    for record in records:
+        if record.filename is None:
+            continue
+        file = os.path.join(DOWNLOAD_PATH, record.filename)
+        month = record.publish_date.month
+        to_file = os.path.join('/Volumes/Bygita/zgzqb',
+                               str(month) + '月',
+                               record.filename)
+        if os.path.isfile(file):
+            # shutil.move(file, to_file)
+            os.rename(file, to_file)
+            print(file, '->', to_file)
+            # input('gg')
+
+
 if __name__ == '__main__':
-    # count_by_month()
+    count_by_month()
     # count_by_day()
     # for di in db.session.query(db.DateInfo).all():
     #     print(di)
     check()
-    remove_dumplicate_files()
+    # remove_dumplicate_files()
+    # classify_by_month()
     print(mapping('峨眉山A(000888)索道提价预期强烈'))
     print(r_mapping('全国政协委员_中煤能源集团原总经_省略_亮_今年煤炭供需总体平衡局部紧张_周明 (2).pdf.pdf'))
